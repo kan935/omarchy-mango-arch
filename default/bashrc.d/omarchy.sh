@@ -79,6 +79,6 @@ fi
 
 # Package-management shortcuts
 alias op='opencode'
-alias u='sudo dnf update'
-alias i='sudo dnf in'
-alias s='sudo dnf search'
+alias u='sudo pacman -Syu'
+alias i='sudo pacman -S'
+alias s='pacman -Ss'

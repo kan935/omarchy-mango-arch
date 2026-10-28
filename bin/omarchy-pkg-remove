@@ -5,7 +5,7 @@
 
 fzf_args=(
   --multi
-  --preview 'dnf info {1}'
+  --preview 'pacman -Qi {1}'
   --preview-label='alt-p: toggle description, alt-j/k: scroll, tab: multi-select'
   --preview-label-pos='bottom'
   --preview-window 'down:65%:wrap'
@@ -15,10 +15,10 @@ fzf_args=(
   --color 'pointer:red,marker:red'
 )
 
-pkg_names=$(rpm -qa --qf '%{NAME}\n' | sort -u | fzf "${fzf_args[@]}")
+pkg_names=$(pacman -Qqe | fzf "${fzf_args[@]}")
 
 if [[ -n $pkg_names ]]; then
-  # Convert newline-separated selections to space-separated for dnf
-  echo "$pkg_names" | tr '\n' ' ' | xargs sudo dnf remove -y
-  omarchy-show-done
+  # Convert newline-separated selections to space-separated for pacman
+  echo "$pkg_names" | tr '\n' ' ' | xargs sudo pacman -Rns --noconfirm
+  omarchy-show-done $?
 fi

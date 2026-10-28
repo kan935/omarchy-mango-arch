@@ -58,7 +58,7 @@ $(journalctl -b -p 4..1)
 =========================================
 INSTALLED PACKAGES
 =========================================
-$(rpm -qa --qf '%{NAME} %{VERSION} (%{RELEASE})\n' 2>/dev/null | sort)
+$(pacman -Q 2>/dev/null | sort)
 EOF
 
 if [[ $PRINT_ONLY = "true" ]]; then

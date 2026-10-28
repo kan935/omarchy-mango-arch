@@ -1,6 +1,34 @@
 #!/bin/bash
 
-# omarchy:summary=Show a fuzzy-finder TUI for AUR packages (not available on Fedora).
+# omarchy:summary=Show a fuzzy-finder TUI for picking new AUR packages to install.
+# omarchy:requires-sudo=true
 
-echo "AUR packages are not available on Fedora. Use 'omarchy-pkg-install' (dnf) or a COPR repository instead." >&2
-exit 1
+helper=$(command -v yay || command -v paru)
+if [[ -z $helper ]]; then
+  echo "No AUR helper found; install yay or paru first." >&2
+  exit 1
+fi
+
+fzf_args=(
+  --multi
+  --preview "$helper -Siia {1}"
+  --preview-label='alt-p: toggle description, alt-b/B: toggle PKGBUILD, alt-j/k: scroll, tab: multi-select'
+  --preview-label-pos='bottom'
+  --preview-window 'down:65%:wrap'
+  --bind 'alt-p:toggle-preview'
+  --bind 'alt-d:preview-half-page-down,alt-u:preview-half-page-up'
+  --bind 'alt-k:preview-up,alt-j:preview-down'
+  --bind "alt-b:change-preview:$helper -Gpa {1} | tail -n +5"
+  --bind "alt-B:change-preview:$helper -Siia {1}"
+  --color 'pointer:green,marker:green'
+)
+
+pkg_names=$("$helper" -Slqa | fzf "${fzf_args[@]}")
+
+if [[ -n $pkg_names ]]; then
+  # Add aur/ prefix to each package name and convert to space-separated for the helper
+  source omarchy-sudo-keepalive
+
+  echo "$pkg_names" | sed 's/^/aur\//' | tr '\n' ' ' | xargs "$helper" -S --noconfirm
+  omarchy-show-done $?
+fi

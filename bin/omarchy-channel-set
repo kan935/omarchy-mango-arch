@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# omarchy:summary=Set the Omarchy git channel (Fedora packages always come from dnf/COPR).
+# omarchy:summary=Set the Omarchy git channel (this fork uses git branches, not package repositories).
 # omarchy:args=<stable|rc|edge|dev>
 
 if (($# == 0)); then
@@ -11,9 +11,9 @@ else
 fi
 
 case "$channel" in
-"stable") omarchy-branch-set "master" ;;
+"stable") omarchy-branch-set "main" ;;
 "rc") omarchy-branch-set "rc" ;;
-"edge") omarchy-branch-set "master" ;;
+"edge") omarchy-branch-set "main" ;;
 "dev") omarchy-branch-set "dev" ;;
 *)
   echo "Unknown channel: $channel"

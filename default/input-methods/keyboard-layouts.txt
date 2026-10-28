@@ -2,7 +2,7 @@
 #
 # Label|console-keymap rows for the Keyboard Layouts picker. The keymap
 # converts to its XKB layout through /usr/share/systemd/kbd-model-map; where
-# Fedora's table has no entry the fork mapping table in typing_setup.py
+# the systemd table has no entry the fork mapping table in typing_setup.py
 # supplies one (ara, pl, ua plus the older Arch console names).
 #
 # Composition engines (Pinyin, Hangul, ...) have no layout row here: they are

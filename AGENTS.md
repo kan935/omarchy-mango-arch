@@ -62,7 +62,7 @@ Example:
 
 # Install Scripts
 
-Install entry points (`install.sh`, `boot.sh`) use `#!/bin/bash`. Many scripts under `install/` are sourced via `run_logged` and intentionally do not have shebangs.
+Install entry point (`install-arch.sh`) uses `#!/bin/bash`. Many scripts under `install/` are sourced via `run_logged` and intentionally do not have shebangs.
 
 Install stage files follow this pattern:
 
@@ -119,7 +119,7 @@ New migration format:
 
 Some older migrations predate these rules. Do not copy older migrations that start with shebangs, omit the leading `echo`, or hard-code `~/.local/share/omarchy`.
 
-Migrations may use raw `dnf`, `rpm`, `command -v`, or direct config edits when needed for historical compatibility or one-off repair work.
+Migrations may use raw package-manager commands, `command -v`, or direct config edits when needed for historical compatibility or one-off repair work.
 
 Example:
 ```bash

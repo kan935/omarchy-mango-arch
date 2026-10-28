@@ -1,6 +1,18 @@
 #!/bin/bash
 
-# omarchy:summary=Reinstalling the Omarchy package set is an Arch/pacman workflow.
+# omarchy:summary=Reinstall all default Omarchy packages from the official Arch repositories.
+# omarchy:requires-sudo=true
 
-echo "This command is not available on Fedora. Use 'omarchy update' or 'sudo dnf reinstall <package>'." >&2
-exit 1
+set -e
+
+package_file="$OMARCHY_PATH/install/omarchy-arch.packages"
+[[ -f $package_file ]] || {
+  echo "Missing package list: $package_file" >&2
+  exit 1
+}
+
+mapfile -t packages < <(grep -vE '^[[:space:]]*(#|$)' "$package_file")
+((${#packages[@]})) || exit 0
+
+echo -e "\e[32m\nReinstall Omarchy packages\e[0m"
+sudo pacman -S --noconfirm --needed "${packages[@]}"

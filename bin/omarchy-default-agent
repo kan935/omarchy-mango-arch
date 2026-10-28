@@ -71,10 +71,9 @@ else
   # Omarchy declares the default agents as mise tools, so installing one is
   # enough and leaves the user's config alone. A user who removed the
   # preinstalls, like one without Omarchy's declarations, selects it instead.
-  # The Fedora port ships without mise (dnf installs the CLIs it ships), so
-  # without it fall back to the same package mise's registry resolves, as a
-  # global npm package installed into ~/.local/bin where user_install finds
-  # it and omarchy-agent prefers it over a lazy shim.
+  # Without mise, fall back to the same npm package mise's registry resolves,
+  # as a global npm package installed into ~/.local/bin where user_install
+  # finds it and omarchy-agent prefers it over a lazy shim.
   declare -A npm_packages=(
     [claude]="@anthropic-ai/claude-code"
     [codex]="@openai/codex"

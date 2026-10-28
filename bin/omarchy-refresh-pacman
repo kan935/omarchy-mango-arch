@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# omarchy:summary=Arch pacman mirror configuration does not apply on Fedora.
+# omarchy:summary=Refresh the Arch package databases and update all packages.
+# omarchy:requires-sudo=true
 
-echo "pacman mirror/repository configuration does not apply on Fedora; packages are managed by dnf." >&2
-exit 1
+set -e
+
+echo -e "\e[32m\nRefresh Arch packages\e[0m"
+sudo pacman -Syu --noconfirm

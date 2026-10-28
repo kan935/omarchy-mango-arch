@@ -6,17 +6,12 @@
 
 set -euo pipefail
 
-# Fedora keeps locales in glibc langpacks: da_DK.UTF-8 comes from
-# glibc-langpack-da, zh_CN.UTF-8 from glibc-langpack-zh, and so on. The
-# langpack name is the language part of the registry locale, lowercase.
 code=${1:-}
 if (( $# != 1 )) || [[ ! $code =~ ^[a-z]{2,3}(-[A-Za-z]{2})?$ ]]; then
   echo "Usage: omarchy-locale-generate <code>" >&2
   exit 1
 fi
 
-# Root reads only the packaged registry; the override is for unprivileged
-# tests (same convention as omarchy-language).
 registry=${OMARCHY_LOCALE_REGISTRY:-$OMARCHY_PATH/default/i18n/locales.json}
 
 locale=$(jq -r --arg code "$code" '.[$code].locale // empty' "$registry")
@@ -44,8 +39,13 @@ if locale_available "$locale"; then
   exit 0
 fi
 
-dnf install -y "glibc-langpack-${locale%%_*}"
+if grep -qE "^[#[:space:]]*${locale}[[:space:]]" /etc/locale.gen; then
+  sed -i -E "s|^[#[:space:]]*${locale}[[:space:]].*|${locale} UTF-8|" /etc/locale.gen
+else
+  printf '%s UTF-8\n' "$locale" >>/etc/locale.gen
+fi
+locale-gen
 
-# Fail loudly if dnf could not make the locale, rather than saving a language
-# whose strings cannot render.
+# Fail loudly if locale-gen could not make the locale, rather than saving a
+# language whose strings cannot render.
 locale_available "$locale"

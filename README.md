@@ -1,10 +1,10 @@
-# Omarchy for Fedora + MangoWC
+# Omarchy for Arch Linux + MangoWC
 
-This is a fork of [Omarchy](https://github.com/basecamp/omarchy) for **Fedora 44**
-and **[MangoWC](https://github.com/mangowm/mango)**. It keeps Omarchy's themes,
-menus, CLI, keybinding conventions, screenshots, recording, idle/lock, and
-desktop helpers, while combining them with the Omarchy 4 "Quattro" Quickshell
-desktop from the upstream `quattro` channel.
+This is a fork of [Omarchy](https://github.com/basecamp/omarchy) for **Arch
+Linux** and **[MangoWC](https://github.com/mangowm/mango)**. It keeps Omarchy's
+themes, menus, CLI, keybinding conventions, screenshots, recording, idle/lock,
+and desktop helpers, while combining them with the Omarchy 4 "Quattro"
+Quickshell desktop from the upstream `quattro` channel.
 
 Quattro is the only desktop shell: bar, tags, menus, notifications, OSD,
 wallpaper, theme and background pickers, idle/lock screen, and the polkit
@@ -14,23 +14,17 @@ swayidle, and SwayOSD) is not installed or started.
 
 ## Requirements
 
-- Fedora 44
-- MangoWC 0.18.2 or newer (`mangowm` from the [Terra repository](https://terra.fyralabs.com/))
-- Quickshell 0.3.2, installed from the Fedora COPR
-  [`errornointernet/quickshell`](https://copr.fedorainfracloud.org/coprs/errornointernet/quickshell/)
-- A Wayland session manager or display manager (Ly is installed and configured
-  by default; GDM, SDDM, greetd, or a TTY also work)
+- Arch Linux (x86_64)
+- MangoWC 0.18.2 or newer (`mangowm` from the official repositories)
+- Quickshell 0.3.2 or newer (`quickshell` from the official repositories)
+- A Wayland session manager or display manager. The installer configures
+  [Ly](https://github.com/fairy-witch/ly) on tty1; GDM, SDDM, greetd, or a
+  plain TTY also work.
 
 Quattro is required for the desktop bar and panels. Mango will start without
 it, but there is no secondary Waybar/Walker session.
 
-Mango is not in Fedora's main repositories. With Terra enabled:
-
-```bash
-sudo dnf install mangowm
-```
-
-Verify it before installing:
+Verify the compositor before installing:
 
 ```bash
 mango -v
@@ -42,40 +36,51 @@ mmsg --help
 ```bash
 git clone <your-fork-url> ~/omarchy-mango
 cd ~/omarchy-mango
-./install-fedora.sh
+./install-arch.sh
 ```
 
 The installer:
 
-- sets `defaultyes`, `fastestmirror`, and 10 parallel downloads in
-  `/etc/dnf/dnf.conf`
-- enables RPM Fusion free/nonfree, Terra, the `errornointernet/quickshell`,
-  `imput/helium` and `peterwu/rendezvous` COPRs, and the Stremio beta
-  repository
-- installs the Fedora package list in `install/omarchy-fedora.packages`, plus
-  the Craft apps and Nuvio from their latest GitHub releases
+- installs the official Arch packages in `install/omarchy-arch.packages`
+- optionally installs the AUR extras in `install/omarchy-arch-aur.packages`
+  through `yay` or `paru`, bootstrapping `yay-bin` when neither exists
 - copies the fork to `~/.local/share/omarchy`, including the Quattro `shell/`
+  and every theme background
 - copies `config/*` to `~/.config`, backing up replaced files to
   `~/.config/omarchy-install-backup-<timestamp>`
-- installs `~/.bashrc.d/omarchy.sh` with the Omarchy bash setup (starship
+- installs `~/.bashrc.d/omarchy.sh` and makes `~/.bashrc` source it (starship
   prompt, zoxide, fzf, eza and aliases)
-- installs `/usr/local/share/wayland-sessions/omarchy-mango.desktop`
-- configures Ly (`/etc/ly/config.ini` and a theme-aware `/etc/ly/startup.sh`)
-  and enables it on tty1
+- installs `/usr/share/wayland-sessions/omarchy-mango.desktop`
+- configures Ly (`/etc/ly/config.ini` and a theme-aware `/etc/ly/startup.sh`),
+  disables other display managers and `getty@tty1`, and enables
+  `ly@tty1.service`
 - prepares the `tokyo-night` theme, background symlink, Quattro `shell.json`,
-  and btop theme
+  btop theme, and GTK/Qt/Neovim/browser colors
 - writes the PAM service used by the Quattro lock screen
-- marks the Arch-era migrations as already applied
+- marks the upstream migrations as already applied
 - validates the generated Mango configuration
 
 Useful options:
 
 ```bash
-./install-fedora.sh --skip-packages
-./install-fedora.sh --theme catppuccin
+./install-arch.sh --skip-packages   # copy config and set up the session only
+./install-arch.sh --skip-aur        # official repositories only
+./install-arch.sh --theme gruvbox
 ```
 
 The installer does not start Mango or restart your current desktop session.
+
+### Optional AUR packages
+
+`install/omarchy-arch-aur.packages` contains the few desktop extras that Arch
+only carries in the AUR:
+
+- `yaru-icon-theme` and `bibata-cursor-theme` for the Omarchy look
+- `ttf-ia-writer` for the iA Writer fonts
+- `helium-browser-bin` for the Omarchy browser
+
+If the AUR is unavailable, the installer warns and leaves Chromium plus the
+Adwaita/Papirus icons in place.
 
 ## Log in
 
@@ -114,6 +119,22 @@ Validate the result at any time:
 mango -c ~/.config/mango/config.conf -p
 ```
 
+## Themed matrix
+
+Ly's built-in `animation = matrix` draws the login screen matrix. Its TTY
+palette is rewritten at login from the active Omarchy theme, so the animation
+follows the theme colors.
+
+Inside the desktop, launch the themed matrix with:
+
+```bash
+omarchy-launch-cmatrix
+```
+
+or `Super + Shift + Alt + C`, or **System → Matrix** in the Omarchy menu.
+It runs `cmatrix` in `foot`, whose palette is generated from the same active
+theme, so the colors change with `omarchy-theme-set`.
+
 ## Key bindings
 
 Mango uses the same `Super`-based layout as Omarchy. The main bindings:
@@ -123,7 +144,7 @@ Mango uses the same `Super`-based layout as Omarchy. The main bindings:
 | `Super + Return` | Terminal (Foot via `xdg-terminal-exec`) |
 | `Super + B` | Browser |
 | `Super + Shift + B` | Private browser |
-| `Super + E` | File manager (Nemo) |
+| `Super + E` | File manager (Nautilus) |
 | `Super + Shift + A` | Coding agent picker |
 | `Super + Space` | Omarchy menu (Quattro) |
 | `Super + Alt + Space` | Omarchy apps menu |
@@ -156,6 +177,7 @@ Mango uses the same `Super`-based layout as Omarchy. The main bindings:
 | `Super + Ctrl + Print` | Extract text from screen |
 | `Super + Ctrl + I` | Toggle idle locking |
 | `Super + Ctrl + N` | Toggle nightlight |
+| `Super + Shift + Alt + C` | Themed cmatrix |
 | `Super + Ctrl + Delete` | Toggle internal display |
 | `Super + Ctrl + Alt + Delete` | Mirror internal display (unsupported, explains why) |
 
@@ -181,27 +203,28 @@ same file to override it.
 | `hyprpicker` | `slurp` + `grim` + ImageMagick |
 | `hyprshot` | `grim` + `slurp` + `satty` |
 | `gpu-screen-recorder` | `wf-recorder` |
-| `pacman` / `yay` | `dnf` / `rpm`; AUR commands are disabled |
-| Arch migrations | pre-marked as applied; Fedora installer is authoritative |
+| `pacman` / `yay` | unchanged; the installer and update scripts use Arch tooling |
+| Arch migrations | pre-marked as applied; `install-arch.sh` is authoritative |
 
 Mango does not support Hyprland's named workspaces, but its native 10 tags map
 directly to Omarchy's workspace keys and the Quattro bar.
 
-## Fedora notes
+## Arch notes
 
-- Quickshell is not in Fedora's main repositories. The installer enables the
-  `errornointernet/quickshell` COPR. To enable it manually:
-  `sudo dnf copr enable -y errornointernet/quickshell`
+- Quickshell and MangoWC are both in the official Arch repositories, so no
+  third-party repository is needed.
 - Polkit uses Quattro's built-in agent. No separate polkit agent package is
   installed, so it cannot race the shell on login.
 - `python3-terminaltexteffects` is unavailable; the screensaver falls back to a
   built-in Python animation.
-- `uwsm`, `xdg-terminal-exec`, `hypridle`, `hyprlock`, `hyprsunset`, `hyprpicker`,
-  and `gpu-screen-recorder` are either absent or replaced. Compatibility shims
-  live in `bin/`.
-- Optional applications that Fedora does not package (Spotify, Obsidian, Typora,
-  LocalSend) can be installed from Flathub or vendor repositories.
-- `omarchy update` uses `dnf upgrade` and skips Arch-only keyring/AUR steps.
+- `uwsm`, `xdg-terminal-exec`, `hypridle`, `hyprlock`, `hyprsunset`,
+  `hyprpicker`, and `gpu-screen-recorder` are either absent or replaced.
+  Compatibility shims live in `bin/`. `xdg-terminal-exec` is installed from
+  the official repositories.
+- Optional applications that Arch only packages in the AUR (Spotify, Obsidian,
+  Typora, LocalSend, 1Password) can be installed with `yay`/`paru` or Flatpak.
+- `omarchy update` runs `pacman -Syu`, updates AUR packages when a helper is
+  present, and then runs the usual Omarchy migrations and hooks.
 
 ## Known Mango limitations
 
@@ -231,7 +254,7 @@ These are Mango or Mango-port limitations, not missing keybindings:
   `~/.config/omarchy/shell.json`
 - Key bindings: `~/.config/mango/bindings.conf`
 - Input and trackpad: `~/.config/mango/input.conf`
-- Shell setup: `~/.bashrc.d/omarchy.sh` (sourced by Fedora's `~/.bashrc`)
+- Shell setup: `~/.bashrc.d/omarchy.sh` (sourced by `~/.bashrc`)
 - Starship prompt: `~/.config/starship.toml`
 - Gaps, borders, blur, animations: `~/.config/mango/looknfeel.conf`
 - Monitor rules: `~/.config/mango/monitors.conf`
@@ -253,8 +276,9 @@ Apply Mango changes with:
 omarchy restart mango    # mmsg dispatch reload_config
 ```
 
-`omarchy-theme-set "Tokyo Night"` or the Quattro theme picker regenerates
-`mango.conf`, Quattro shell colors, and the rest of the themed files.
+`omarchy-theme-set tokyo-night` or the Quattro theme picker regenerates
+`mango.conf`, Quattro shell colors, the foot palette, and the rest of the
+themed files.
 
 ## Troubleshooting
 
@@ -269,16 +293,9 @@ mango -c ~/.config/mango/config.conf -p
 Check that Quickshell and the bundled shell are present:
 
 ```bash
-rpm -q quickshell
+pacman -Q quickshell
 test -f ~/.local/share/omarchy/shell/shell.qml && echo shell-present
 omarchy restart shell
-```
-
-If Quickshell is missing:
-
-```bash
-sudo dnf copr enable -y errornointernet/quickshell
-sudo dnf install quickshell
 ```
 
 Startup errors are appended to `$XDG_RUNTIME_DIR/omarchy/shell.log`. There is
@@ -289,7 +306,7 @@ no fallback bar; install Quickshell and restart the session.
 Install the Nerd Font and Font Awesome icon fonts:
 
 ```bash
-sudo dnf install jetbrainsmono-nerd-fonts fontawesome-fonts-all
+sudo pacman -S ttf-jetbrains-mono-nerd otf-font-awesome
 fc-cache -f
 omarchy restart shell
 ```
@@ -324,16 +341,29 @@ does not occur in a normal login.
 **The session is not listed at login**
 
 ```bash
-ls /usr/local/share/wayland-sessions/omarchy-mango.desktop
+ls /usr/share/wayland-sessions/omarchy-mango.desktop
 ```
 
-Make sure `/usr/local/share` is in `XDG_DATA_DIRS`; on Fedora it is by default.
+Ly 1.4 scans `/usr/share/wayland-sessions`; the installer writes the session
+there. If another display manager is used, make sure `/usr/share` is in
+`XDG_DATA_DIRS` (it is on Arch by default).
+
+**Ly does not start**
+
+```bash
+systemctl status ly@tty1.service
+sudo ly-dm -c /etc/ly/config.ini
+```
+
+The installer writes `/etc/ly/config.ini` and a theme-aware
+`/etc/ly/startup.sh`. Re-run `./install-arch.sh --skip-packages` to restore
+them.
 
 ## Development
 
-The working branch is `mango-fedora`. Most scripts still accept the original
-Omarchy command names; only compositor-specific commands were renamed from
-`omarchy-hyprland-*` to `omarchy-mango-*`.
+Most scripts still accept the original Omarchy command names; only
+compositor-specific commands were renamed from `omarchy-hyprland-*` to
+`omarchy-mango-*`.
 
 ```bash
 bin/omarchy commands --check

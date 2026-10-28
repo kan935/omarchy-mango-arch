@@ -13,7 +13,7 @@ if [[ -d $OMARCHY_PATH/.git ]]; then
   git -C "$OMARCHY_PATH" --no-pager diff --check || git -C "$OMARCHY_PATH" reset --merge
 else
   echo "Skipping git update: $OMARCHY_PATH has no git metadata."
-  echo "Re-run install-fedora.sh from your fork checkout to update the files."
+  echo "Re-run install-arch.sh from your fork checkout to update the files."
 fi
 
 mmsg dispatch reload_config &>/dev/null || true

@@ -1,6 +1,19 @@
 #!/bin/bash
 
-# omarchy:summary=AUR updates are not available on Fedora
+# omarchy:summary=Update AUR packages if any are installed
 
-echo -e "\e[32m\nAUR updates are not applicable on Fedora (skipping)\e[0m"
-echo
+helper=$(command -v yay || command -v paru)
+if [[ -z $helper ]]; then
+  echo -e "\e[32m\nAUR helper not installed (so skipping updates)\e[0m"
+  echo
+  exit 0
+fi
+
+if pacman -Qem >/dev/null 2>&1; then
+  echo -e "\e[32m\nUpdate AUR packages\e[0m"
+  "$helper" -Sua --noconfirm || exit 1
+  echo
+else
+  echo -e "\e[32m\nNo AUR packages installed (so skipping updates)\e[0m"
+  echo
+fi

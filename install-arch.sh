@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Omarchy on Fedora with MangoWC
+# Omarchy on Arch Linux with MangoWC
 #
-# Installs the Fedora/Mango fork into the current user's home directory:
+# Installs the Arch/Mango fork into the current user's home directory:
 #   ~/.local/share/omarchy     program files
 #   ~/.config                  desktop configuration
 #   /usr/local/share/wayland-sessions/omarchy-mango.desktop
 #
 # Existing ~/.config files that would be replaced are backed up first.
 #
-# Usage: ./install-fedora.sh [--skip-packages] [--theme <name>]
+# Usage: ./install-arch.sh [--skip-packages] [--skip-aur] [--theme <name>]
 
 set -eEo pipefail
 
@@ -19,6 +19,7 @@ CONFIG_DIR="$HOME/.config"
 STATE_DIR="$HOME/.local/state/omarchy"
 THEME="tokyo-night"
 SKIP_PACKAGES=false
+SKIP_AUR=false
 
 log() {
   printf '\n\033[1;34m==>\033[0m %s\n' "$*"
@@ -38,7 +39,8 @@ usage() {
 Usage: $0 [options]
 
 Options:
-  --skip-packages   Do not configure repositories or install Fedora packages
+  --skip-packages   Do not install Arch packages
+  --skip-aur        Do not install optional AUR packages
   --theme <name>    Initial theme (default: tokyo-night)
   -h, --help        Show this help
 EOF
@@ -48,6 +50,11 @@ while (($#)); do
   case "$1" in
   --skip-packages)
     SKIP_PACKAGES=true
+    SKIP_AUR=true
+    shift
+    ;;
+  --skip-aur)
+    SKIP_AUR=true
     shift
     ;;
   --theme)
@@ -65,164 +72,80 @@ while (($#)); do
   esac
 done
 
-[[ -f /etc/fedora-release ]] || die "This installer targets Fedora."
+[[ -f /etc/arch-release ]] || die "This installer targets Arch Linux."
 
 export OMARCHY_PATH
 export PATH="$OMARCHY_PATH/bin:$HOME/.local/bin:$PATH"
 
-set_dnf_option() {
-  local key="$1"
-  local value="$2"
-  local conf="$3"
-
-  if grep -qE "^[[:space:]]*$key[[:space:]]*=" "$conf"; then
-    sudo sed -i -E "s|^[[:space:]]*$key[[:space:]]*=.*|$key=$value|" "$conf"
-  else
-    echo "$key=$value" | sudo tee -a "$conf" >/dev/null
-  fi
-}
-
-configure_dnf() {
-  local conf="/etc/dnf/dnf.conf"
-
-  [[ -f $conf ]] || die "Missing $conf; this installer expects a stock Fedora dnf.conf."
-
-  log "Configuring dnf: default yes, fastest mirror, parallel downloads"
-  sudo -v || die "sudo access is required to configure dnf"
-
-  set_dnf_option defaultyes True "$conf"
-  set_dnf_option fastestmirror True "$conf"
-  set_dnf_option max_parallel_downloads 10 "$conf"
-}
-
-configure_repos() {
-  local releasever=""
-  local project=""
-
-  releasever="$(rpm -E %fedora)"
-  sudo -v || die "sudo access is required to enable package repositories"
-
-  log "Enabling RPM Fusion, Terra, and the extra COPRs"
-
-  rpm -q rpmfusion-free-release >/dev/null 2>&1 ||
-    sudo dnf install -y "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$releasever.noarch.rpm"
-  rpm -q rpmfusion-nonfree-release >/dev/null 2>&1 ||
-    sudo dnf install -y "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$releasever.noarch.rpm"
-
-  # Terra carries mangowm. Its release package is unsigned, so dnf needs
-  # --nogpgcheck for this one install.
-  rpm -q terra-release >/dev/null 2>&1 ||
-    sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra$releasever" terra-release
-
-  # dnf5's copr command lives in dnf5-plugins, which a minimal Fedora
-  # installation may not include yet.
-  dnf copr --help >/dev/null 2>&1 || sudo dnf install -y dnf5-plugins
-  for project in errornointernet/quickshell imput/helium peterwu/rendezvous; do
-    sudo dnf copr enable -y "$project" >/dev/null
-  done
-
-  # Stremio beta, packaged by harborstremio and hosted on Cloudsmith.
-  if [[ ! -f /etc/yum.repos.d/harborstremio-harbor-beta.repo ]]; then
-    sudo tee /etc/yum.repos.d/harborstremio-harbor-beta.repo >/dev/null <<EOF
-[harborstremio-harbor-beta]
-name=harborstremio-harbor-beta
-baseurl=https://dl.cloudsmith.io/public/harborstremio/harbor-beta/rpm/fedora/$releasever/\$basearch
-repo_gpgcheck=1
-enabled=1
-skip_if_unavailable=1
-gpgkey=https://dl.cloudsmith.io/public/harborstremio/harbor-beta/gpg.DBAA4A70AAEC7957.key
-gpgcheck=1
-sslverify=1
-metadata_expire=300
-type=rpm-md
-
-[harborstremio-harbor-beta-noarch]
-name=harborstremio-harbor-beta-noarch
-baseurl=https://dl.cloudsmith.io/public/harborstremio/harbor-beta/rpm/fedora/$releasever/noarch
-repo_gpgcheck=1
-enabled=1
-skip_if_unavailable=1
-gpgkey=https://dl.cloudsmith.io/public/harborstremio/harbor-beta/gpg.DBAA4A70AAEC7957.key
-gpgcheck=1
-sslverify=1
-metadata_expire=300
-type=rpm-md
-EOF
-  fi
-}
-
 install_packages() {
-  local package_file="$SOURCE_DIR/install/omarchy-fedora.packages"
+  local package_file="$SOURCE_DIR/install/omarchy-arch.packages"
   local package=""
   local pending=()
-  local missing=()
 
   [[ -f $package_file ]] || die "Missing package list: $package_file"
 
-  package_installed() {
-    rpm -q "$1" >/dev/null 2>&1
-  }
-
   while IFS= read -r package; do
     [[ -n $package ]] || continue
-    package_installed "$package" || pending+=("$package")
+    pacman -Q "$package" >/dev/null 2>&1 || pending+=("$package")
   done < <(grep -vE '^[[:space:]]*(#|$)' "$package_file")
 
   if ((${#pending[@]} == 0)); then
-    log "All Fedora packages are already installed"
+    log "All Arch packages are already installed"
     return 0
   fi
 
-  log "Installing ${#pending[@]} Fedora packages (this can take a while)"
-  sudo -v
-
-  # Fedora ships the codec-limited build; RPM Fusion's full build provides the
-  # playback Omarchy expects and conflicts with it.
-  if rpm -q ffmpeg-free >/dev/null 2>&1 && ! rpm -q ffmpeg >/dev/null 2>&1; then
-    sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing || warn "Could not replace ffmpeg-free with ffmpeg"
-  fi
-
-  sudo dnf install -y --skip-unavailable "${pending[@]}" || true
-
-  for package in "${pending[@]}"; do
-    package_installed "$package" || missing+=("$package")
-  done
-
-  if ((${#missing[@]})); then
-    warn "These packages are still missing: ${missing[*]}"
-    echo "MangoWC is packaged as 'mangowm' in the Terra repository: https://terra.fyralabs.com/" >&2
-    echo "Install the remaining packages manually, then rerun this script." >&2
-  fi
+  log "Installing ${#pending[@]} Arch packages (this can take a while)"
+  sudo -v || die "sudo access is required to install packages"
+  sudo pacman -Syu --noconfirm
+  sudo pacman -S --needed --noconfirm "${pending[@]}"
 }
 
-install_release_apps() {
-  local repo package url
+install_aur_helper() {
+  local tmp=""
 
-  [[ $(uname -m) == "x86_64" ]] || return 0
+  command -v yay >/dev/null 2>&1 && return 0
+  command -v paru >/dev/null 2>&1 && return 0
 
-  while read -r repo package; do
-    rpm -q "$package" >/dev/null 2>&1 && continue
+  log "Installing the yay AUR helper"
+  tmp="$(mktemp -d)"
+  git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
+  (cd "$tmp/yay-bin" && makepkg -si --noconfirm)
+  rm -rf "$tmp"
+}
 
-    log "Installing $package from the latest GitHub release"
-    url=$(curl -fsSL --max-time 30 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null |
-      grep -oE 'https://[^"]+x86_64[^"]*\.rpm' | head -n 1 || true)
+install_aur_packages() {
+  local package_file="$SOURCE_DIR/install/omarchy-arch-aur.packages"
+  local package=""
+  local pending=()
+  local helper=""
 
-    if [[ -z $url ]]; then
-      warn "No x86_64 RPM found for $package"
-      continue
-    fi
+  [[ -f $package_file ]] || return 0
 
-    sudo -v
-    sudo dnf install -y "$url" || warn "Could not install $package"
-  done <<'EOF'
-storytold/pdfcraft pdfcraft
-storytold/wordcraft wordcraft
-storytold/cadcraft cadcraft
-storytold/deckcraft deckcraft
-storytold/gridcraft gridcraft
-storytold/photocraft photocraft
-NuvioMedia/NuvioDesktop nuvio
-EOF
+  while IFS= read -r package; do
+    [[ -n $package ]] || continue
+    pacman -Q "$package" >/dev/null 2>&1 || pending+=("$package")
+  done < <(grep -vE '^[[:space:]]*(#|$)' "$package_file")
+
+  if ((${#pending[@]} == 0)); then
+    log "All optional AUR packages are already installed"
+    return 0
+  fi
+
+  if ! install_aur_helper; then
+    warn "Could not install an AUR helper; skipping: ${pending[*]}"
+    return 0
+  fi
+
+  if command -v yay >/dev/null 2>&1; then
+    helper=yay
+  else
+    helper=paru
+  fi
+
+  log "Installing ${#pending[@]} AUR packages"
+  sudo -v || true
+  "$helper" -S --needed --noconfirm "${pending[@]}" ||
+    warn "Some AUR packages could not be installed: ${pending[*]}"
 }
 
 copy_program_files() {
@@ -280,6 +203,7 @@ EOF
 
 install_bash_shell() {
   local target="$HOME/.bashrc.d/omarchy.sh"
+  local bashrc="$HOME/.bashrc"
 
   log "Installing the Omarchy bash shell setup"
   mkdir -p "$HOME/.bashrc.d"
@@ -287,12 +211,18 @@ install_bash_shell() {
     cp -a "$target" "$target.bak-$(date +%Y%m%d-%H%M%S)"
   fi
   install -m644 "$OMARCHY_PATH/default/bashrc.d/omarchy.sh" "$target"
+
+  # Arch's stock ~/.bashrc does not read ~/.bashrc.d.
+  touch "$bashrc"
+  if ! grep -qF '.bashrc.d/omarchy.sh' "$bashrc"; then
+    printf '\n# Omarchy shell setup\n[[ -f ~/.bashrc.d/omarchy.sh ]] && source ~/.bashrc.d/omarchy.sh\n' >>"$bashrc"
+  fi
 }
 
 install_ly() {
   log "Configuring the Ly login manager"
 
-  if ! command -v ly >/dev/null 2>&1; then
+  if ! command -v ly-dm >/dev/null 2>&1; then
     warn "ly is not installed; skipping login manager setup"
     return 0
   fi
@@ -303,6 +233,7 @@ install_ly() {
   fi
   sudo install -Dm644 "$OMARCHY_PATH/default/ly/config.ini" /etc/ly/config.ini
   sed "s|@HOME@|$HOME|g" "$OMARCHY_PATH/default/ly/startup.sh" | sudo tee /etc/ly/startup.sh >/dev/null
+  sudo chmod 755 /etc/ly/startup.sh
   for dm in gdm sddm lightdm; do
     sudo systemctl disable "$dm.service" >/dev/null 2>&1 || true
   done
@@ -319,21 +250,29 @@ install_lock_auth() {
 install_session_file() {
   log "Installing the Omarchy (Mango) Wayland session"
   sudo -v || die "sudo access is required to install the Wayland session file"
+  # Ly 1.4 only scans /usr/share/wayland-sessions, so install there rather
+  # than /usr/local/share where Ly would not list the session.
   sudo install -Dm644 "$OMARCHY_PATH/default/wayland-sessions/omarchy-mango.desktop" \
-    /usr/local/share/wayland-sessions/omarchy-mango.desktop
+    /usr/share/wayland-sessions/omarchy-mango.desktop
 }
 
 configure_browser() {
-  log "Preparing Chromium and Helium theme policy directory"
+  local browser="chromium.desktop"
+
+  if [[ -f /usr/share/applications/helium.desktop ]]; then
+    browser="helium.desktop"
+  fi
+
+  log "Preparing the Chromium theme policy directory"
   sudo -v || die "sudo access is required to create the browser policy directory"
   sudo mkdir -p /etc/chromium/policies/managed
   sudo chmod a+rw /etc/chromium/policies/managed
 
-  log "Setting Helium as the default browser"
-  xdg-settings set default-web-browser helium.desktop || warn "Could not set the default browser"
-  xdg-mime default helium.desktop x-scheme-handler/http
-  xdg-mime default helium.desktop x-scheme-handler/https
-  xdg-mime default helium.desktop text/html
+  log "Setting $browser as the default browser"
+  xdg-settings set default-web-browser "$browser" || warn "Could not set the default browser"
+  xdg-mime default "$browser" x-scheme-handler/http
+  xdg-mime default "$browser" x-scheme-handler/https
+  xdg-mime default "$browser" text/html
 }
 
 prepare_theme() {
@@ -356,8 +295,6 @@ prepare_theme() {
   mv "$current/next-theme" "$current/theme"
   printf '%s\n' "$THEME" >"$current/theme.name"
 
-  # Start on a still when the theme has one, so motion wallpapers stay an
-  # explicit choice (same rule as omarchy-theme-bg-next).
   background=$(find -L "$current/theme/backgrounds" -maxdepth 1 -type f \
     ! -iregex '.*\.\(mp4\|m4v\|mov\|webm\|mkv\|avi\)$' 2>/dev/null | sort | head -n 1 || true)
   [[ -n $background ]] || background=$(find -L "$current/theme/backgrounds" -maxdepth 1 -type f 2>/dev/null | sort | head -n 1 || true)
@@ -393,7 +330,7 @@ verify_install() {
   local failed=false
   local command=""
 
-  for command in mango mmsg quickshell qs swaylock grim slurp wf-recorder ly; do
+  for command in mango mmsg quickshell qs cmatrix ly-dm foot; do
     if ! command -v "$command" >/dev/null 2>&1; then
       warn "Required command not found: $command"
       failed=true
@@ -418,10 +355,10 @@ verify_install() {
 }
 
 if ! $SKIP_PACKAGES; then
-  configure_dnf
-  configure_repos
   install_packages
-  install_release_apps
+  if ! $SKIP_AUR; then
+    install_aur_packages
+  fi
 fi
 
 copy_program_files
@@ -444,7 +381,9 @@ Next steps:
        exec $OMARCHY_PATH/bin/omarchy-mango-session
   2. Change themes with: omarchy-theme-set "Tokyo Night"
   3. Check key bindings with: omarchy-menu-keybindings
-  4. Update later with: omarchy update
+  4. Launch the themed matrix with: omarchy-launch-cmatrix
+     or Super + Shift + Alt + C
+  5. Update later with: omarchy update
 
 Mango limitations are documented in README.md (no mirroring, per-window
 opacity, or lid-switch events; best-effort fallbacks are provided).

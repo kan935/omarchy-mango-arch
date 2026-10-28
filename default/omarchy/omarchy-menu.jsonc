@@ -34,6 +34,7 @@
 
   // System
   "system.screensaver": {"icon":"󱄄","label":"Screensaver","action":"omarchy-launch-screensaver force"},
+  "system.matrix": {"icon":"󰘧","label":"Matrix","action":"omarchy-launch-cmatrix"},
   "system.lock": {"icon":"","label":"Lock","action":"omarchy-system-lock"},
   "system.suspend": {"icon":"󰒲","label":"Suspend","when":"! omarchy-toggle-enabled suspend-off && ! omarchy-sleep-disabled","action":"systemctl suspend"},
   "system.hibernate": {"icon":"󰤁","label":"Hibernate","when":"omarchy-hibernation-available && ! omarchy-sleep-disabled","action":"systemctl hibernate"},
@@ -421,7 +422,7 @@
   "remove.development.elixir.phoenix": {"icon":"","label":"Phoenix","when":"[[ -d $HOME/.local/share/mise/installs/elixir ]]","action":"omarchy-launch-floating-terminal-with-presentation 'omarchy-remove-dev-env phoenix'"},
 
   // Update
-  "update.omarchy": {"icon":"󰣛","label":"Fedora Update System","action":"omarchy-launch-floating-terminal-with-presentation omarchy-update"},
+  "update.omarchy": {"icon":"󰣛","label":"Arch Update System","action":"omarchy-launch-floating-terminal-with-presentation omarchy-update"},
   "update.config": {"icon":"","label":"Config","title":"Reset to default"},
   "update.config.mango": {"icon":"󱁃","label":"Mango","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-mango"},
   "update.process": {"icon":"","label":"Process","title":"Restart"},

@@ -432,15 +432,15 @@ var GUARD_READERS = [
 // them everywhere, including for no arguments at all (present is true of
 // nothing, missing is not).
 //
-// Fedora uses rpm rather than pacman. Cache the installed names once for the
-// batch, then fall back to rpm for version constraints; this mirrors the
-// omarchy-pkg-* helpers without paying one rpm process per menu row.
+// Pacman answers package presence. Cache the installed names once for the
+// batch, then fall back to pacman for version constraints; this mirrors the
+// omarchy-pkg-* helpers without paying one pacman process per menu row.
 function guardHelpers() {
   return 'declare -A __omarchy_pkgs=()\n'
-    + 'mapfile -t __omarchy_pkg_names < <(rpm -qa --qf "%{NAME}\\n" 2>/dev/null)\n'
+    + 'mapfile -t __omarchy_pkg_names < <(pacman -Qq 2>/dev/null)\n'
     + 'for __omarchy_pkg in "${__omarchy_pkg_names[@]}"; do __omarchy_pkgs[$__omarchy_pkg]=1; done\n'
     + '__omarchy_pkg_has() { [[ -n ${__omarchy_pkgs[$1]-} ]] && return 0; '
-    + '[[ $1 == *[\\<\\>=]* ]] && { rpm -q "$1" &>/dev/null; return; }; return 1; }\n'
+    + '[[ $1 == *[\\<\\>=]* ]] && { pacman -Q "$1" &>/dev/null; return; }; return 1; }\n'
     + 'omarchy-pkg-present() { local p; for p in "$@"; do __omarchy_pkg_has "$p" || return 1; done; return 0; }\n'
     + 'omarchy-pkg-missing() { local p; for p in "$@"; do __omarchy_pkg_has "$p" || return 0; done; return 1; }\n'
     + 'omarchy-cmd-present() { local c; for c in "$@"; do command -v "$c" &>/dev/null || return 1; done; return 0; }\n'

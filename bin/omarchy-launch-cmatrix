@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# omarchy:summary=Launch cmatrix in the current Omarchy theme
+# omarchy:args=[cmatrix options...]
+
+# foot reads ~/.config/omarchy/current/theme/foot.ini, so cmatrix's ANSI
+# palette follows the active theme without a second color source.
+exec foot --app-id=org.omarchy.cmatrix --title=Matrix -e cmatrix "$@"

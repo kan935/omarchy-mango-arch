@@ -13,7 +13,7 @@ description: >
 
 # Omarchy Skill
 
-Manage [Omarchy](https://omarchy.org/) on **Fedora 44 with MangoWC**. This fork keeps Omarchy's themes, menus, and CLI while using Mango's native tags and IPC.
+Manage [Omarchy](https://omarchy.org/) on **Arch Linux with MangoWC**. This fork keeps Omarchy's themes, menus, and CLI while using Mango's native tags and IPC.
 
 This skill is for end-user customization on installed systems.
 It is not for contributing to Omarchy source code.
@@ -73,7 +73,7 @@ Omarchy is built on:
 
 | Component | Purpose | Config Location |
 |-----------|---------|-----------------|
-| **Fedora 44** | Base OS | `/etc/`, `~/.config/` |
+| **Arch Linux** | Base OS | `/etc/`, `~/.config/` |
 | **MangoWC** | Wayland compositor/WM | `~/.config/mango/` |
 | **Quattro shell** | Bar, menus, notifications, OSD, lock | `~/.config/omarchy/shell.json` |
 | **Alacritty/Foot/Kitty/Ghostty** | Terminals | `~/.config/<terminal>/` |
@@ -364,7 +364,7 @@ When user requests system changes:
 2. **Is it a config edit?** Edit in `~/.config/`, never `~/.local/share/omarchy/`
 3. **Is it a theme customization?** Create a NEW custom theme directory
 4. **Is it automation?** Use hooks in `~/.config/omarchy/hooks/`
-5. **Is it a package install?** Use `omarchy pkg add <pkgs...>` (Fedora `dnf`; the AUR does not exist here)
+5. **Is it a package install?** Use `omarchy pkg add <pkgs...>` (Arch `pacman`; AUR packages via `omarchy pkg aur add`)
 6. **Unsure if command exists?** Run `omarchy commands` (or `omarchy <group> --help` for one group)
 
 ### Reminder Requests
