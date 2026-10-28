@@ -1,9 +1,0 @@
-# Optional AUR packages installed by install-arch.sh.
-#
-# These keep the exact Omarchy look on Arch. If the AUR is unavailable the
-# installer warns and falls back to Chromium plus the Adwaita/Papirus icons.
-
-yaru-icon-theme
-bibata-cursor-theme
-ttf-ia-writer
-helium-browser-bin

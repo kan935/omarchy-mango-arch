@@ -42,8 +42,10 @@ cd ~/omarchy-mango
 The installer:
 
 - installs the official Arch packages in `install/omarchy-arch.packages`
-- optionally installs the AUR extras in `install/omarchy-arch-aur.packages`
-  through `yay` or `paru`, bootstrapping `yay-bin` when neither exists
+- optionally enables Chaotic-AUR and installs the desktop extras in
+  `install/omarchy-arch-chaotic.packages` from that binary repository
+- installs the iA Writer fonts directly from upstream, because Chaotic-AUR
+  does not carry `ttf-ia-writer`
 - copies the fork to `~/.local/share/omarchy`, including the Quattro `shell/`
   and every theme background
 - copies `config/*` to `~/.config`, backing up replaced files to
@@ -64,23 +66,30 @@ Useful options:
 
 ```bash
 ./install-arch.sh --skip-packages   # copy config and set up the session only
-./install-arch.sh --skip-aur        # official repositories only
+./install-arch.sh --skip-extras     # official repositories only
 ./install-arch.sh --theme gruvbox
 ```
 
 The installer does not start Mango or restart your current desktop session.
 
-### Optional AUR packages
+### Optional Chaotic-AUR packages
 
-`install/omarchy-arch-aur.packages` contains the few desktop extras that Arch
-only carries in the AUR:
+`install/omarchy-arch-chaotic.packages` contains the few desktop extras that
+Arch only carries in the AUR. The installer adds the
+[Chaotic-AUR](https://aur.chaotic.cx/) binary repository (keyring, mirror list,
+and `[chaotic-aur]` entry in `/etc/pacman.conf`) and installs them with
+`pacman`, so no AUR helper or local build is required:
 
 - `yaru-icon-theme` and `bibata-cursor-theme` for the Omarchy look
-- `ttf-ia-writer` for the iA Writer fonts
 - `helium-browser-bin` for the Omarchy browser
 
-If the AUR is unavailable, the installer warns and leaves Chromium plus the
-Adwaita/Papirus icons in place.
+Chaotic-AUR does not carry `ttf-ia-writer`, so the installer downloads the
+pinned iA-Fonts archive from upstream and installs the static Mono, Quattro,
+Duo, and Duospace fonts into `/usr/share/fonts/ttf-ia-writer`.
+
+If Chaotic-AUR is unavailable, the installer warns and leaves Chromium plus the
+Adwaita/Papirus icons in place. Pass `--skip-extras` to skip all optional
+packages and leave `/etc/pacman.conf` untouched.
 
 ## Log in
 
@@ -203,7 +212,7 @@ same file to override it.
 | `hyprpicker` | `slurp` + `grim` + ImageMagick |
 | `hyprshot` | `grim` + `slurp` + `satty` |
 | `gpu-screen-recorder` | `wf-recorder` |
-| `pacman` / `yay` | unchanged; the installer and update scripts use Arch tooling |
+| `pacman` / `yay` | official packages plus Chaotic-AUR binaries; the installer does not build AUR packages |
 | Arch migrations | pre-marked as applied; `install-arch.sh` is authoritative |
 
 Mango does not support Hyprland's named workspaces, but its native 10 tags map
@@ -211,8 +220,8 @@ directly to Omarchy's workspace keys and the Quattro bar.
 
 ## Arch notes
 
-- Quickshell and MangoWC are both in the official Arch repositories, so no
-  third-party repository is needed.
+- Quickshell and MangoWC are both in the official Arch repositories.
+  Chaotic-AUR is only used for the optional desktop extras.
 - Polkit uses Quattro's built-in agent. No separate polkit agent package is
   installed, so it cannot race the shell on login.
 - `python3-terminaltexteffects` is unavailable; the screensaver falls back to a
@@ -223,8 +232,9 @@ directly to Omarchy's workspace keys and the Quattro bar.
   the official repositories.
 - Optional applications that Arch only packages in the AUR (Spotify, Obsidian,
   Typora, LocalSend, 1Password) can be installed with `yay`/`paru` or Flatpak.
-- `omarchy update` runs `pacman -Syu`, updates AUR packages when a helper is
-  present, and then runs the usual Omarchy migrations and hooks.
+- `omarchy update` runs `pacman -Syu`, updates AUR packages only when a
+  helper is already installed, and then runs the usual Omarchy migrations and
+  hooks. The installer itself does not install an AUR helper.
 
 ## Known Mango limitations
 

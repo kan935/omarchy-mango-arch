@@ -5,11 +5,11 @@
 # Installs the Arch/Mango fork into the current user's home directory:
 #   ~/.local/share/omarchy     program files
 #   ~/.config                  desktop configuration
-#   /usr/local/share/wayland-sessions/omarchy-mango.desktop
+#   /usr/share/wayland-sessions/omarchy-mango.desktop
 #
 # Existing ~/.config files that would be replaced are backed up first.
 #
-# Usage: ./install-arch.sh [--skip-packages] [--skip-aur] [--theme <name>]
+# Usage: ./install-arch.sh [--skip-packages] [--skip-extras] [--theme <name>]
 
 set -eEo pipefail
 
@@ -19,7 +19,13 @@ CONFIG_DIR="$HOME/.config"
 STATE_DIR="$HOME/.local/state/omarchy"
 THEME="tokyo-night"
 SKIP_PACKAGES=false
-SKIP_AUR=false
+SKIP_EXTRAS=false
+
+CHAOTIC_KEY="3056513887B78AEB"
+CHAOTIC_KEYRING_URL="https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst"
+CHAOTIC_MIRRORLIST_URL="https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst"
+IA_FONTS_URL="https://github.com/iaolo/iA-Fonts/archive/b337fe1a4c93026268f70e4b2678371f3e89e2ce.tar.gz"
+IA_FONTS_SHA512="f085d58874db75c100987ea36fbd0846fd124f45917ad081dcae30d674a5b1f8ddb0de3d6100300de752cef79b03a131930b5d1560988088490f34f45a407fc7"
 
 log() {
   printf '\n\033[1;34m==>\033[0m %s\n' "$*"
@@ -40,7 +46,7 @@ Usage: $0 [options]
 
 Options:
   --skip-packages   Do not install Arch packages
-  --skip-aur        Do not install optional AUR packages
+  --skip-extras     Do not install optional Chaotic-AUR packages
   --theme <name>    Initial theme (default: tokyo-night)
   -h, --help        Show this help
 EOF
@@ -50,11 +56,11 @@ while (($#)); do
   case "$1" in
   --skip-packages)
     SKIP_PACKAGES=true
-    SKIP_AUR=true
+    SKIP_EXTRAS=true
     shift
     ;;
-  --skip-aur)
-    SKIP_AUR=true
+  --skip-extras | --skip-aur)
+    SKIP_EXTRAS=true
     shift
     ;;
   --theme)
@@ -100,24 +106,57 @@ install_packages() {
   sudo pacman -S --needed --noconfirm "${pending[@]}"
 }
 
-install_aur_helper() {
-  local tmp=""
+setup_chaotic_aur() {
+  log "Configuring the Chaotic-AUR repository"
+  sudo -v || die "sudo access is required to configure Chaotic-AUR"
 
-  command -v yay >/dev/null 2>&1 && return 0
-  command -v paru >/dev/null 2>&1 && return 0
+  if ! sudo pacman-key --list-keys "$CHAOTIC_KEY" >/dev/null 2>&1; then
+    log "Importing the Chaotic-AUR signing key"
+    if ! sudo pacman-key --recv-key "$CHAOTIC_KEY" --keyserver keyserver.ubuntu.com; then
+      warn "Could not import the Chaotic-AUR signing key"
+      return 1
+    fi
+  fi
 
-  log "Installing the yay AUR helper"
-  tmp="$(mktemp -d)"
-  git clone --depth 1 https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"
-  (cd "$tmp/yay-bin" && makepkg -si --noconfirm)
-  rm -rf "$tmp"
+  if ! sudo pacman-key --lsign-key "$CHAOTIC_KEY" >/dev/null; then
+    warn "Could not locally sign the Chaotic-AUR key"
+    return 1
+  fi
+
+  if ! pacman -Q chaotic-keyring chaotic-mirrorlist >/dev/null 2>&1; then
+    log "Installing the Chaotic-AUR keyring and mirror list"
+    if ! sudo pacman -U --needed --noconfirm "$CHAOTIC_KEYRING_URL" "$CHAOTIC_MIRRORLIST_URL"; then
+      warn "Could not install the Chaotic-AUR keyring"
+      return 1
+    fi
+  fi
+
+  if ! grep -qE '^[[:space:]]*\[chaotic-aur\]' /etc/pacman.conf; then
+    sudo cp -a /etc/pacman.conf "/etc/pacman.conf.bak-$(date +%Y%m%d-%H%M%S)" || {
+      warn "Could not back up /etc/pacman.conf"
+      return 1
+    }
+    if ! printf '\n[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist\n' |
+      sudo tee -a /etc/pacman.conf >/dev/null; then
+      warn "Could not enable Chaotic-AUR in /etc/pacman.conf"
+      return 1
+    fi
+    log "Enabled [chaotic-aur] in /etc/pacman.conf"
+  else
+    log "Chaotic-AUR is already enabled in /etc/pacman.conf"
+  fi
+
+  if ! sudo pacman -Syu --noconfirm; then
+    warn "Could not sync the Chaotic-AUR repository"
+    return 1
+  fi
 }
 
-install_aur_packages() {
-  local package_file="$SOURCE_DIR/install/omarchy-arch-aur.packages"
+install_chaotic_packages() {
+  local package_file="$SOURCE_DIR/install/omarchy-arch-chaotic.packages"
   local package=""
   local pending=()
-  local helper=""
+  local available=()
 
   [[ -f $package_file ]] || return 0
 
@@ -127,25 +166,76 @@ install_aur_packages() {
   done < <(grep -vE '^[[:space:]]*(#|$)' "$package_file")
 
   if ((${#pending[@]} == 0)); then
-    log "All optional AUR packages are already installed"
+    log "All optional Chaotic-AUR packages are already installed"
     return 0
   fi
 
-  if ! install_aur_helper; then
-    warn "Could not install an AUR helper; skipping: ${pending[*]}"
+  for package in "${pending[@]}"; do
+    if pacman -Si "chaotic-aur/$package" >/dev/null 2>&1; then
+      available+=("chaotic-aur/$package")
+    else
+      warn "Package not found in Chaotic-AUR: $package"
+    fi
+  done
+
+  ((${#available[@]})) || return 0
+
+  log "Installing ${#available[@]} packages from Chaotic-AUR"
+  sudo -v || die "sudo access is required to install Chaotic-AUR packages"
+  sudo pacman -S --needed --noconfirm "${available[@]}" ||
+    warn "Some Chaotic-AUR packages could not be installed"
+}
+
+install_ia_writer_fonts() {
+  local tmp=""
+  local archive=""
+  local count=0
+
+  if pacman -Q ttf-ia-writer >/dev/null 2>&1 || [[ -d /usr/share/fonts/ttf-ia-writer ]]; then
+    log "iA Writer fonts are already installed"
     return 0
   fi
 
-  if command -v yay >/dev/null 2>&1; then
-    helper=yay
-  else
-    helper=paru
+  log "Installing the iA Writer fonts from upstream"
+  tmp="$(mktemp -d)"
+  archive="$tmp/ia-fonts.tar.gz"
+
+  if ! curl -fsSL "$IA_FONTS_URL" -o "$archive"; then
+    warn "Could not download the iA Writer fonts"
+    rm -rf "$tmp"
+    return 0
   fi
 
-  log "Installing ${#pending[@]} AUR packages"
-  sudo -v || true
-  "$helper" -S --needed --noconfirm "${pending[@]}" ||
-    warn "Some AUR packages could not be installed: ${pending[*]}"
+  if ! printf '%s  %s\n' "$IA_FONTS_SHA512" "$archive" | sha512sum -c --quiet -; then
+    warn "iA Writer font archive checksum mismatch"
+    rm -rf "$tmp"
+    return 0
+  fi
+
+  if ! tar -xzf "$archive" -C "$tmp" --wildcards \
+    '*/iA Writer Mono/Static/*.ttf' \
+    '*/iA Writer Quattro/Static/*.ttf' \
+    '*/iA Writer Duo/Static/*.ttf' \
+    '*/iA Writer Duospace/TTF (PC)/*.ttf'; then
+    warn "Could not extract the iA Writer fonts"
+    rm -rf "$tmp"
+    return 0
+  fi
+
+  count=$(find "$tmp" -type f -name '*.ttf' | wc -l)
+  if ((count == 0)); then
+    warn "No iA Writer fonts found in the upstream archive"
+    rm -rf "$tmp"
+    return 0
+  fi
+
+  sudo -v || die "sudo access is required to install fonts"
+  sudo install -d /usr/share/fonts/ttf-ia-writer
+  find "$tmp" -type f -name '*.ttf' -print0 |
+    sudo xargs -0 -r install -m644 -t /usr/share/fonts/ttf-ia-writer
+  sudo fc-cache -f >/dev/null 2>&1 || true
+  rm -rf "$tmp"
+  log "Installed $count iA Writer fonts"
 }
 
 copy_program_files() {
@@ -356,8 +446,13 @@ verify_install() {
 
 if ! $SKIP_PACKAGES; then
   install_packages
-  if ! $SKIP_AUR; then
-    install_aur_packages
+  if ! $SKIP_EXTRAS; then
+    if setup_chaotic_aur; then
+      install_chaotic_packages
+    else
+      warn "Skipping optional Chaotic-AUR packages"
+    fi
+    install_ia_writer_fonts
   fi
 fi
 

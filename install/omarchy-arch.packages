@@ -1,8 +1,8 @@
 # Arch Linux packages installed by install-arch.sh
 #
-# Everything here is in the official Arch repositories. The few Omarchy
-# desktop extras that Arch only carries in the AUR are listed separately in
-# install/omarchy-arch-aur.packages.
+# Everything here is in the official Arch repositories. The optional desktop
+# extras are listed in install/omarchy-arch-chaotic.packages and installed
+# from the Chaotic-AUR binary repository.
 
 # Compositor, shell, and login manager
 mangowm

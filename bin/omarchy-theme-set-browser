@@ -33,7 +33,7 @@ refresh_running_browser() {
 set_browser_policy /etc/chromium/policies/managed
 refresh_running_browser chromium chromium
 # Helium reads the Chromium managed policy directory.
-refresh_running_browser helium helium
+refresh_running_browser helium helium-browser
 
 set_browser_policy /etc/opt/chrome/policies/managed
 refresh_running_browser chrome google-chrome-stable || refresh_running_browser chrome google-chrome

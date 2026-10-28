@@ -1,0 +1,10 @@
+# Optional desktop extras installed from the Chaotic-AUR binary repository.
+#
+# Chaotic-AUR builds and signs these AUR packages, so the installer does not
+# need an AUR helper or a local build. The iA Writer fonts are installed
+# directly from upstream by install-arch.sh because Chaotic-AUR does not
+# carry ttf-ia-writer.
+
+yaru-icon-theme
+bibata-cursor-theme
+helium-browser-bin
